@@ -1,4 +1,4 @@
-name: Build C Project
+name: Build and Commit OoT3D Freecam
 
 on:
   push:
@@ -6,37 +6,63 @@ on:
       - main
       - master
   pull_request:
-    branches:
-      - main
-      - master
+  workflow_dispatch:
 
 jobs:
   build:
+    name: Build 3DS Mod
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # needed for committing back
 
-      - name: Install dependencies
+      # Step 2: Install devkitPro & devkitARM
+      - name: Install devkitPro / devkitARM
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential
+          sudo apt-get install -y wget git make python3
+          wget https://apt.devkitpro.org/install-devkitpro-pacman
+          chmod +x install-devkitpro-pacman
+          sudo ./install-devkitpro-pacman
+          sudo dkp-pacman -Sy --noconfirm 3ds-dev
 
-
-      - name: Build
+      # Step 3: Set environment variables
+      - name: Set environment
         run: |
-          mkdir -p build
-          cd build
-          make -f ../Makefile
+          echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
+          echo "DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
+          echo "PATH=$PATH:/opt/devkitpro/devkitARM/bin" >> $GITHUB_ENV
 
-      - name: Run tests
+      # Step 4: Build the project
+      - name: Build project
         run: |
-          cd build
-          make test || echo "No tests defined"
+          make clean
+          make
+        env:
+          DEVKITPRO: /opt/devkitpro
+          DEVKITARM: /opt/devkitpro/devkitARM
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: compiled-binaries
-          path: build/
+      # Step 5: List build outputs
+      - name: Show build outputs
+        run: ls -R | grep -E "\.elf$|\.bin$|\.3dsx$|\.cia$" || true
+
+      # Step 6: Commit built files back to repository
+      - name: Commit and push build outputs
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create output folder if not exists
+          mkdir -p build_outputs
+
+          # Copy key build results
+          find . -type f \( -name "*.elf" -o -name "*.bin" -o -name "*.3dsx" -o -name "*.cia" \) -exec cp {} build_outputs/ \;
+
+          git add build_outputs
+          git commit -m "Automated build output [skip ci]" || echo "No changes to commit"
+          git push origin HEAD:${{ github.ref }}
