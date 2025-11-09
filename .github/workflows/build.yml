@@ -1,68 +1,63 @@
-name: Build and Commit OoT3D Freecam
+name: Build and Commit All OoT3D Patches
 
 on:
   push:
     branches:
       - main
       - master
-  pull_request:
   workflow_dispatch:
 
 jobs:
   build:
-    name: Build 3DS Mod
     runs-on: ubuntu-latest
+    name: Build All Regions (3DS + Citra)
 
     steps:
       # Step 1: Checkout repository
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # needed for committing back
+          fetch-depth: 0
 
-      # Step 2: Install devkitPro & devkitARM
-      - name: Install devkitPro / devkitARM
+      # Step 2: Install devkitPro / devkitARM
+      - name: Install devkitPro toolchain
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget git make python3
+          sudo apt-get install -y wget git make python3 bash
           wget https://apt.devkitpro.org/install-devkitpro-pacman
           chmod +x install-devkitpro-pacman
           sudo ./install-devkitpro-pacman
           sudo dkp-pacman -Sy --noconfirm 3ds-dev
 
-      # Step 3: Set environment variables
-      - name: Set environment
+      # Step 3: Set environment
+      - name: Set environment variables
         run: |
           echo "DEVKITPRO=/opt/devkitpro" >> $GITHUB_ENV
           echo "DEVKITARM=/opt/devkitpro/devkitARM" >> $GITHUB_ENV
           echo "PATH=$PATH:/opt/devkitpro/devkitARM/bin" >> $GITHUB_ENV
 
-      # Step 4: Build the project
-      - name: Build project
+      # Step 4: Run your all-region build script
+      - name: Run makeAll.sh
         run: |
-          make clean
-          make
+          chmod +x makeAll.sh
+          ./makeAll.sh
         env:
           DEVKITPRO: /opt/devkitpro
           DEVKITARM: /opt/devkitpro/devkitARM
 
-      # Step 5: List build outputs
-      - name: Show build outputs
-        run: ls -R | grep -E "\.elf$|\.bin$|\.3dsx$|\.cia$" || true
+      # Step 5: Show build output structure
+      - name: List generated patch files
+        run: |
+          echo "Generated files:"
+          find "Patch Files" -type f -name "*.ips" || true
 
-      # Step 6: Commit built files back to repository
+      # Step 6: Commit and push results
       - name: Commit and push build outputs
         if: success()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Create output folder if not exists
-          mkdir -p build_outputs
-
-          # Copy key build results
-          find . -type f \( -name "*.elf" -o -name "*.bin" -o -name "*.3dsx" -o -name "*.cia" \) -exec cp {} build_outputs/ \;
-
-          git add build_outputs
-          git commit -m "Automated build output [skip ci]" || echo "No changes to commit"
+          git add "Patch Files/"
+          git commit -m "Automated rebuild of patch files [skip ci]" || echo "No changes to commit"
           git push origin HEAD:${{ github.ref }}
