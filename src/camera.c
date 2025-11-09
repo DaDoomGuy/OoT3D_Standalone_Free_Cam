@@ -286,8 +286,8 @@ void Camera_FreeCamUpdate(Vec3s* out, Camera* camera) {
 
         if (rInputCtx.cStick.dx * rInputCtx.cStick.dx + rInputCtx.cStick.dy * rInputCtx.cStick.dy > 900) {
             // Invert X input in mirror world
-            yaw -= rInputCtx.cStick.dx * speed * (((controls & 1) ^ gSaveContext.masterQuestFlag) ? -1 : 1);
-            pitch = Clamp(pitch + rInputCtx.cStick.dy * speed * ((controls & 2) ? -1 : 1));
+            yaw -= rInputCtx.cStick.dx * speed * 0.5 * (((controls & 1) ^ gSaveContext.masterQuestFlag) ? -1 : 1);    //Adjusted speed for 60fps by adding (* 0.5)
+            pitch = Clamp(pitch + rInputCtx.cStick.dy * speed * 0.5 * ((controls & 2) ? -1 : 1));                     //Adjusted speed for 60fps by adding (* 0.5)
         }
 
         // Set intended camera position
