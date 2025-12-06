@@ -24,22 +24,22 @@ void before_GlobalContext_Update(GlobalContext* globalCtx) {
     Input_Update();
 
     u32 held = rInputCtx.cur.val, pressed = rInputCtx.pressed.val;
-    if ((held & BUTTON_SELECT) && (held && BUTTON_START)) {
-        if ((pressed & BUTTON_UP) && spdOpt < 6) {
+    if ((held & BUTTON_SELECT) && (held && BUTTON_START)) {        //Adjusted Button Combination so it doesnt interfere with 60/30 fps switch
+        if ((pressed & BUTTON_RIGHT) && spdOpt < 6) {
             spdOpt++;
             alertSpd = 30;
         }
-        if ((pressed & BUTTON_DOWN) && spdOpt) {
+        if ((pressed & BUTTON_LEFT) && spdOpt) {
             spdOpt--;
             alertSpd = 30;
         }
         speed = speeds[spdOpt];
 
-        if (pressed & BUTTON_LEFT) {
+        if (pressed & BUTTON_DOWN) {
             controls--;
             alertCtr = 30;
         }
-        if (pressed & BUTTON_RIGHT) {
+        if (pressed & BUTTON_UP) {
             controls++;
             alertCtr = 30;
         }
